@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+set -e -o pipefail
+
+# Add repo specific metadata here.
+
+BASE_IMAGE_CONFIG_KEY_PREFIX="BASE_IMAGE"
+
+UPSTREAM_PACKAGE_NAME="nvm/Node.js"
+UPSTREAM_NVM_VERSION_CONFIG_KEY="NVM_VERSION"
+UPSTREAM_NODEJS_VERSION_CONFIG_KEY="IMAGE_NODEJS_VERSION"
+UPSTREAM_NVM_CHECKSUM_CONFIG_KEY="NVM_SHA256_CHECKSUM"
+UPSTREAM_NVM_GIT_REPO="https://github.com/nvm-sh/nvm"
+
+RELEASE_PACKAGE_NAME="Node.js"
+RELEASE_PACKAGE_VERSION_CONFIG_KEY="IMAGE_NODEJS_VERSION"
+RELEASE_TAG_PACKAGE_NAME="node"
+RELEASE_USE_CUSTOM_RELEASE_VERSION="y"
+
+TEST_TYPE="background"
+TEST_CONTAINER_TYPE="node-base"
+TEST_CONTAINER_START_WAIT_SECONDS="10"
+
+current_nvm_version() {
+    get_config_arg ${UPSTREAM_NVM_VERSION_CONFIG_KEY:?}
+}
+
+latest_nvm_version() {
+    git_remote_repo_latest_tag "${UPSTREAM_NVM_GIT_REPO:?}"
+}
+
+current_node_version() {
+    get_config_arg ${UPSTREAM_NODEJS_VERSION_CONFIG_KEY:?}
+}
+
+latest_node_version() {
+    curl --silent --location https://nodejs.org/dist/index.tab | \
+        tail -n+2 | \
+        cut -d $'\t' -f 1 | \
+        sort --version-sort --reverse | \
+        head -1
+}
+
+current_upstream_version() {
+    local nvm_ver="$(current_nvm_version)"
+    local node_ver="$(current_node_version)"
+    echo "${nvm_ver:?}/${node_ver:?}"
+}
+
+latest_upstream_version() {
+    local nvm_ver="$(latest_nvm_version)"
+    local node_ver="$(latest_node_version ${nvm_ver:?})"
+    echo "${nvm_ver:?}/${node_ver:?}"
+}
+
+update_latest_upstream_version() {
+    local cur_ver="${1:?}"
+    local latest_ver="${2:?}"
+    local cur_nvm_ver="$(echo "${cur_ver:?}" | cut -d '/' -f 1)"
+    local cur_node_ver="$(echo "${cur_ver:?}" | cut -d '/' -f 2)"
+    local latest_nvm_ver="$(echo "${latest_ver:?}" | cut -d '/' -f 1)"
+    local latest_node_ver="$(echo "${latest_ver:?}" | cut -d '/' -f 2)"
+    local latest_nvm_sha256_checksum="$(github_repo_archive_sha256_checksum ${UPSTREAM_NVM_GIT_REPO:?} ${latest_nvm_ver:?})"
+
+    echo "Updating ${UPSTREAM_PACKAGE_NAME:?} ${UPSTREAM_NVM_VERSION_CONFIG_KEY:?}/${UPSTREAM_NODEJS_VERSION_CONFIG_KEY:?} '${cur_ver:?}' -> '${latest_ver:?}'"
+    set_config_arg "${UPSTREAM_NVM_VERSION_CONFIG_KEY:?}" "${latest_nvm_ver:?}"
+    set_config_arg "${UPSTREAM_NVM_CHECKSUM_CONFIG_KEY:?}" "${latest_nvm_sha256_checksum:?}"
+    set_config_arg "${UPSTREAM_NODEJS_VERSION_CONFIG_KEY:?}" "${latest_node_ver:?}"
+    git add ${ARGS_FILE:?}
+}
+
+custom_release_version() {
+    echo -n "v$(latest_base_image_tag)"
+}
+
+package_current_release_version() {
+    get_config_arg "${RELEASE_PACKAGE_VERSION_CONFIG_KEY:?}"
+}
+
+test_start_container() {
+    local container_name="${1:?}"
+    docker run \
+        --name ${container_name:?} \
+        --detach \
+        --rm \
+        --publish 127.0.0.1:8082:8082 \
+        ${IMAGE:?} \
+        bash -c 'source $NVM_DIR/nvm.sh && npx -y http-server -p 8082'
+}
+
+test_image_after_container_startup() {
+    local container_name="${1:?}"
+    test_http_endpoint "${container_name:?}" http 127.0.0.1 8082
+}
