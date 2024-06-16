@@ -10,7 +10,7 @@ ARG IMAGE_NODEJS_VERSION
 
 # hadolint ignore=SC1091
 RUN \
-    set -e -o pipefail \
+    set -E -e -o pipefail \
     && homelab install-tar-dist \
         https://github.com/nvm-sh/nvm/archive/refs/tags/${NVM_VERSION:?}.tar.gz \
         ${NVM_SHA256_CHECKSUM:?} \
