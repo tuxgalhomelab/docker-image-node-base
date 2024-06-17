@@ -33,7 +33,7 @@ current_node_version() {
 }
 
 latest_node_version() {
-    curl --silent --location https://nodejs.org/dist/index.tab | \
+    curl --silent --fail --location https://nodejs.org/dist/index.tab | \
         tail -n+2 | \
         cut -d $'\t' -f 1 | \
         sort --version-sort --reverse | \
