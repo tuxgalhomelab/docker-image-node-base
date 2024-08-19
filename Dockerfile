@@ -13,15 +13,10 @@ ARG IMAGE_NODEJS_VERSION
 # hadolint ignore=SC1091
 RUN \
     set -E -e -o pipefail \
-    && homelab install-tar-dist \
-        https://github.com/nvm-sh/nvm/archive/refs/tags/${NVM_VERSION:?}.tar.gz \
+    && homelab install-node \
+        ${NVM_VERSION:?} \
         ${NVM_SHA256_CHECKSUM:?} \
-        nvm \
-        nvm-${NVM_VERSION#"v"} \
-        root \
-        root \
-    && source "/opt/nvm/nvm.sh" \
-    && nvm install ${IMAGE_NODEJS_VERSION:?} \
+        ${IMAGE_NODEJS_VERSION:?} \
     # Clean up. \
     && homelab cleanup
 
