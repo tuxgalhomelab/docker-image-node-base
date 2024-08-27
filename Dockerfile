@@ -13,6 +13,7 @@ ARG IMAGE_NODEJS_VERSION
 # hadolint ignore=SC1091
 RUN \
     set -E -e -o pipefail \
+    && export HOMELAB_VERBOSE=y \
     && homelab install-node \
         ${NVM_VERSION:?} \
         ${NVM_SHA256_CHECKSUM:?} \
