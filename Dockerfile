@@ -8,7 +8,7 @@ ARG NVM_VERSION
 ARG NVM_SHA256_CHECKSUM
 ARG IMAGE_NODEJS_VERSION
 
-# hadolint ignore=SC1091
+# hadolint ignore=SC1091,SC3040
 RUN \
     set -E -e -o pipefail \
     && export HOMELAB_VERBOSE=y \
