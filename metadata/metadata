@@ -35,6 +35,8 @@ current_node_version() {
 latest_node_version() {
     curl --silent --fail --location --show-error https://nodejs.org/dist/index.tab | \
         tail -n+2 | \
+        cut -d $'\t' -f '1,10' | \
+        grep -v '-' | \
         cut -d $'\t' -f 1 | \
         sort --version-sort --reverse | \
         head -1
@@ -48,7 +50,7 @@ current_upstream_version() {
 
 latest_upstream_version() {
     local nvm_ver="$(latest_nvm_version)"
-    local node_ver="$(latest_node_version ${nvm_ver:?})"
+    local node_ver="$(latest_node_version)"
     echo "${nvm_ver:?}/${node_ver:?}"
 }
 
